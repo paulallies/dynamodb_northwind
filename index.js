@@ -1,60 +1,55 @@
-const { Client } = require("pg");
-const ULID = require("ulid");
-const client = new Client({
-  password: "h1FNFvsADEYtAhbgU6e__i-3rRnwd6WQ",
-  user: "cvroglml",
-  host: "tai.db.elephantsql.com",
-  port: "5432",
-  database: "cvroglml",
-});
-const { writeBatch, deleteBatch, getItems, createGSI } = require("./dynamodb");
+require("dotenv").config({ path: "./.env" })
 
-function addPrimaryKey(coll) {
-  const result = coll.map((item) => {
-    const id = ULID.ulid();
-    return {
-      PK: `SUPPLIER#${id}`,
-      SK: `SUPPLIER#${id}`,
-      ...item,
-    };
-  });
+const { writeBatch, deleteBatch, ddbQuery, createGSI, ddbCreateTypeCollectionItems } = require("./dynamodb_utils");
+const { listPgTables, pgQuery } = require("./pg_utils");
+const { print } = require("./utils")
 
-  return result;
-}
-
-async function listSuppliers() {
-  const res = await client.query(`SELECT * from  suppliers`);
-  return res.rows;
-}
-
-async function migrateSuppliers() {
-  const suppliers = await listSuppliers();
-  const items = addPrimaryKey(suppliers);
+async function migrateDataTables({ pg_table, type, sort_key_prop }) {
+  const data = await pgQuery(`select * from ${pg_table}`);
+  const items = ddbCreateTypeCollectionItems({ data, type, sort_key_prop });
   await writeBatch(items);
-  console.log("Suppliers Migrated Successfully");
+  print(`${pg_table} migrated`)
 }
 
-async function deleteSuppliers() {
-  const items = await getItems({ gsi: "GSI_1", PK: "PK1" });
+
+
+
+async function deleteCollection(name) {
+  const type = name.toUpperCase();
+  const items = await ddbQuery({ index: 'GSI_TYPE', PK: "PK_TYPE", PKValue: type });
   await deleteBatch(items);
+  console.log(`Collection ${type} deleted!`)
+
 }
 
-async function createGSI_1() {
-  await createGSI({
-    table: "NORTHWIND",
-    name: "GSI_1",
-    PK: "PK1",
-    SK: "SK1",
-  });
+async function migrateCollections() {
+
+  await migrateDataTables({
+    pg_table: "suppliers",
+    type: "SUPPLIER",
+    sort_key_prop: "company_name"
+  })
+
+  await migrateDataTables({
+    pg_table: "customers",
+    type: "CUSTOMER",
+    sort_key_prop: "company_name"
+  })
 }
+
+async function createTypeGSI() {
+  await createGSI({ name: "GSI_TYPE", PK: "PK_TYPE", SK: "SK_TYPE" })
+}
+
+
 
 (async () => {
   try {
-    await client.connect();
-    await migrateSuppliers();
-    process.exit();
+
+  }
+  catch (err) {
+    console.error(err.message)
   } finally {
-    await client.end();
     process.exit();
   }
 })();

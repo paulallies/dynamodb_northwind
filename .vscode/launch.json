@@ -7,11 +7,12 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch API",
+            "runtimeExecutable": "/Users/paulallies/.nvm/versions/node/v16.5.0/bin/node",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}/index.js"
+            "program": "${workspaceFolder}/server.js"
         }
     ]
 }

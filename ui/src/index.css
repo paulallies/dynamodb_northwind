@@ -1,0 +1,11 @@
+*{
+    margin: 0;
+    padding: 0;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.table-master-child{
+    padding: 20px;
+    display: flex;
+
+}
